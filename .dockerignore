@@ -1,0 +1,7 @@
+.git/
+.zcode/
+.prettierrc.json
+.prettierignore
+Dockerfile
+.dockerignore
+docker-compose.yml

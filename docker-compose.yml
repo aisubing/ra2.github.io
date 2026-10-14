@@ -1,0 +1,15 @@
+name: ra2web
+
+services:
+  ra2web:
+    container_name: ra2web
+    image: ra2web:latest
+    build: .
+    network_mode: bridge
+    restart: always
+    logging:
+      options:
+        max-size: 1m
+        max-file: '1'
+    ports:
+      - 5157:5157
