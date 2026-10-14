@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 确定版本号（手动输入优先，否则取 version.json 的 appVersion）
         id: ver
@@ -37,10 +37,10 @@ jobs:
           echo "本次构建版本: $V"
 
       - name: 配置 QEMU（arm64 交叉构建）
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: 配置 Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: 构建 amd64 镜像并导出 tar 包
         env:
@@ -57,7 +57,7 @@ jobs:
           docker save ra2web:$VER-arm64 | gzip > ra2web_${VER}_arm64.tar.gz
 
       - name: 创建 Release 并上传镜像包
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         env:
           VER: ${{ steps.ver.outputs.version }}
         with:
