@@ -1,5 +1,6 @@
 .git/
 .zcode/
+.github/
 .prettierrc.json
 .prettierignore
 Dockerfile

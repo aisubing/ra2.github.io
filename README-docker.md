@@ -43,6 +43,27 @@ docker buildx build --platform linux/amd64,linux/arm64 -t <你的镜像名>:late
 | `.dockerignore` | 构建上下文排除项 |
 | `httpd.conf` | BusyBox httpd MIME 补充（`.wasm` 等，镜像自动生效且禁止外部访问） |
 | `config-docker.json` | **运行时配置覆盖层**，见下 |
+| `.github/workflows/docker-release.yml` | 手动构建并发布 Release 的 workflow，见下 |
+
+## CI：手动构建并发布 Release（.github/workflows/docker-release.yml）
+
+不使用镜像仓库，采用**手动触发**：仓库 Actions 页面 → `docker-release` → Run workflow → 填写版本号（如 `0.87.1`）。Workflow 会：
+
+1. 用 buildx + QEMU 构建 **amd64 和 arm64** 两个镜像（含 config 覆盖层合并）；
+2. `docker save | gzip` 导出两个 tar 包；
+3. 自动创建 `docker-v<版本>` 标签和 GitHub Release，并附上镜像包。
+
+使用方下载对应架构的包后：
+
+```bash
+docker load < ra2web_0.87.1_amd64.tar.gz
+docker run -d --name ra2web --restart always -p 5157:5157 ra2web:0.87.1-amd64
+```
+
+注意（首次使用前）：
+
+- fork 仓库的 Actions 默认禁用，需到 Actions 页面点击启用；
+- Release 创建需要 workflow 具备 `contents: write` 权限（已在 workflow 中声明）。
 
 ## config-docker.json（配置覆盖，避免与上游冲突）
 

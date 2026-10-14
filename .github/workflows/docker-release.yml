@@ -1,0 +1,73 @@
+name: docker-release
+
+# 手动构建并发布 Docker 镜像包到 GitHub Release。
+# 触发方式：Actions 页面 → docker-release → Run workflow → 填写版本号。
+# 不使用 GHCR 镜像仓库，Release 中只提供 docker save 导出的 tar 包，
+# 用户下载后 docker load 导入（适合离线分发，见 README-docker.md）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（如 0.87.1，将创建 docker-v<版本> 标签和 Release）'
+        required: true
+      notes:
+        description: 'Release 补充说明（可选）'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 QEMU（arm64 交叉构建）
+        uses: docker/setup-qemu-action@v3
+
+      - name: 配置 Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 构建 amd64 镜像并导出 tar 包
+        run: |
+          docker buildx build --platform linux/amd64 --load -t ra2web:${{ inputs.version }}-amd64 .
+          docker save ra2web:${{ inputs.version }}-amd64 | gzip > ra2web_${{ inputs.version }}_amd64.tar.gz
+
+      - name: 构建 arm64 镜像并导出 tar 包
+        run: |
+          docker buildx build --platform linux/arm64 --load -t ra2web:${{ inputs.version }}-arm64 .
+          docker save ra2web:${{ inputs.version }}-arm64 | gzip > ra2web_${{ inputs.version }}_arm64.tar.gz
+
+      - name: 创建 Release 并上传镜像包
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: docker-v${{ inputs.version }}
+          name: ra2web docker-v${{ inputs.version }}
+          body: |
+            网页红警（RA2WEB）Docker 镜像包。镜像内只含站点本体（约 75MB），
+            游戏资源由玩家首次游戏时从官方地址按版本自动下载，不随包分发。
+
+            ## 使用方法
+
+            按主机架构下载对应包，导入并运行：
+
+            ```bash
+            # x86_64 主机
+            docker load < ra2web_${{ inputs.version }}_amd64.tar.gz
+            docker run -d --name ra2web --restart always -p 5157:5157 ra2web:${{ inputs.version }}-amd64
+
+            # ARM64 主机
+            docker load < ra2web_${{ inputs.version }}_arm64.tar.gz
+            docker run -d --name ra2web --restart always -p 5157:5157 ra2web:${{ inputs.version }}-arm64
+            ```
+
+            访问 http://localhost:5157 即可游玩。
+
+            ${{ inputs.notes }}
+          files: |
+            ra2web_${{ inputs.version }}_amd64.tar.gz
+            ra2web_${{ inputs.version }}_arm64.tar.gz
+          generate_release_notes: true
