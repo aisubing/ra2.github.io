@@ -31,9 +31,14 @@ EOF
 
 FROM lipanski/docker-static-website:2.6.0
 
+# 镜像版本标签：CI 从 version.json 的 appVersion 自动传入；本地构建默认 dev。
+# 查看方式：docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' <镜像>
+ARG RA2WEB_VERSION=dev
+
 LABEL org.opencontainers.image.title="ra2web" \
       org.opencontainers.image.description="网页红警（RA2WEB / 网页红井）静态站点" \
-      org.opencontainers.image.source="https://github.com/aisubing/ra2.github.io"
+      org.opencontainers.image.source="https://github.com/aisubing/ra2.github.io" \
+      org.opencontainers.image.version=$RA2WEB_VERSION
 
 COPY . /home/static/
 COPY --from=config /src/config.json /home/static/config.json

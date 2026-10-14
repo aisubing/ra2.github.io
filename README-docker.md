@@ -49,9 +49,16 @@ docker buildx build --platform linux/amd64,linux/arm64 -t <你的镜像名>:late
 
 不使用镜像仓库，采用**手动触发**：仓库 Actions 页面 → `docker-release` → Run workflow → 填写版本号（如 `0.87.1`）。Workflow 会：
 
-1. 用 buildx + QEMU 构建 **amd64 和 arm64** 两个镜像（含 config 覆盖层合并）；
-2. `docker save | gzip` 导出两个 tar 包；
-3. 自动创建 `docker-v<版本>` 标签和 GitHub Release，并附上镜像包。
+1. 确定版本号：**手动输入优先，留空自动提取 `version.json` 的 `appVersion`**（与游戏版本强绑定）；
+2. 用 buildx + QEMU 构建 **amd64 和 arm64** 两个镜像（含 config 覆盖层合并），版本写入镜像 LABEL（`org.opencontainers.image.version`）；
+3. `docker save | gzip` 导出两个 tar 包；
+4. 自动创建 `docker-v<版本>` 标签和 GitHub Release，并附上镜像包。
+
+本地构建的镜像版本标记：compose 默认 `local`，可用环境变量覆盖（`RA2WEB_VERSION=0.87.1 docker compose up -d --build`）。查看任意镜像的版本：
+
+```bash
+docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' ra2web:latest
+```
 
 使用方下载对应架构的包后：
 

@@ -4,7 +4,11 @@ services:
   ra2web:
     container_name: ra2web
     image: ra2web:latest
-    build: .
+    build:
+      context: .
+      args:
+        # 本地构建的镜像版本标记，可用环境变量覆盖：RA2WEB_VERSION=0.87.1 docker compose up -d --build
+        RA2WEB_VERSION: ${RA2WEB_VERSION:-local}
     network_mode: bridge
     restart: always
     logging:

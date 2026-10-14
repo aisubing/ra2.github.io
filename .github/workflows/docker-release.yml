@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号（如 0.87.1，将创建 docker-v<版本> 标签和 Release）'
-        required: true
+        description: '版本号（留空则自动提取 version.json 的 appVersion）'
+        required: false
       notes:
         description: 'Release 补充说明（可选）'
         required: false
@@ -25,6 +25,17 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
+      - name: 确定版本号（手动输入优先，否则取 version.json 的 appVersion）
+        id: ver
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            V="${{ inputs.version }}"
+          else
+            V="$(jq -r .appVersion version.json)"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "本次构建版本: $V"
+
       - name: 配置 QEMU（arm64 交叉构建）
         uses: docker/setup-qemu-action@v3
 
@@ -32,23 +43,29 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: 构建 amd64 镜像并导出 tar 包
+        env:
+          VER: ${{ steps.ver.outputs.version }}
         run: |
-          docker buildx build --platform linux/amd64 --load -t ra2web:${{ inputs.version }}-amd64 .
-          docker save ra2web:${{ inputs.version }}-amd64 | gzip > ra2web_${{ inputs.version }}_amd64.tar.gz
+          docker buildx build --platform linux/amd64 --build-arg RA2WEB_VERSION=$VER --load -t ra2web:$VER-amd64 .
+          docker save ra2web:$VER-amd64 | gzip > ra2web_${VER}_amd64.tar.gz
 
       - name: 构建 arm64 镜像并导出 tar 包
+        env:
+          VER: ${{ steps.ver.outputs.version }}
         run: |
-          docker buildx build --platform linux/arm64 --load -t ra2web:${{ inputs.version }}-arm64 .
-          docker save ra2web:${{ inputs.version }}-arm64 | gzip > ra2web_${{ inputs.version }}_arm64.tar.gz
+          docker buildx build --platform linux/arm64 --build-arg RA2WEB_VERSION=$VER --load -t ra2web:$VER-arm64 .
+          docker save ra2web:$VER-arm64 | gzip > ra2web_${VER}_arm64.tar.gz
 
       - name: 创建 Release 并上传镜像包
         uses: softprops/action-gh-release@v2
+        env:
+          VER: ${{ steps.ver.outputs.version }}
         with:
-          tag_name: docker-v${{ inputs.version }}
-          name: ra2web docker-v${{ inputs.version }}
+          tag_name: docker-v${{ env.VER }}
+          name: ra2web docker-v${{ env.VER }}
           body: |
-            网页红警（RA2WEB）Docker 镜像包。镜像内只含站点本体（约 75MB），
-            游戏资源由玩家首次游戏时从官方地址按版本自动下载，不随包分发。
+            网页红警（RA2WEB）Docker 镜像包，游戏版本 ${{ env.VER }}（取自 version.json 的 appVersion）。
+            镜像内只含站点本体（约 75MB），游戏资源由玩家首次游戏时从官方地址按版本自动下载，不随包分发。
 
             ## 使用方法
 
@@ -56,18 +73,19 @@ jobs:
 
             ```bash
             # x86_64 主机
-            docker load < ra2web_${{ inputs.version }}_amd64.tar.gz
-            docker run -d --name ra2web --restart always -p 5157:5157 ra2web:${{ inputs.version }}-amd64
+            docker load < ra2web_${{ env.VER }}_amd64.tar.gz
+            docker run -d --name ra2web --restart always -p 5157:5157 ra2web:${{ env.VER }}-amd64
 
             # ARM64 主机
-            docker load < ra2web_${{ inputs.version }}_arm64.tar.gz
-            docker run -d --name ra2web --restart always -p 5157:5157 ra2web:${{ inputs.version }}-arm64
+            docker load < ra2web_${{ env.VER }}_arm64.tar.gz
+            docker run -d --name ra2web --restart always -p 5157:5157 ra2web:${{ env.VER }}-arm64
             ```
 
             访问 http://localhost:5157 即可游玩。
+            查看镜像版本：`docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' ra2web:${{ env.VER }}-amd64`
 
             ${{ inputs.notes }}
           files: |
-            ra2web_${{ inputs.version }}_amd64.tar.gz
-            ra2web_${{ inputs.version }}_arm64.tar.gz
+            ra2web_${{ env.VER }}_amd64.tar.gz
+            ra2web_${{ env.VER }}_arm64.tar.gz
           generate_release_notes: true
