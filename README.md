@@ -63,35 +63,4 @@ fork该项目，命名为 你的名字.github.io，例如 ra2web.github.io
 
 [![一键部署到Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/ra2web/ra2web.github.io)
 
-### Docker 部署
-
-本仓库提供 `Dockerfile` 和 `docker-compose.yml`，基于 [lipanski/docker-static-website](https://github.com/lipanski/docker-static-website)（BusyBox httpd 静态服务器），单阶段构建、无需编译。
-
-方式一：docker compose（推荐）
-
-```bash
-docker compose up -d
-```
-
-方式二：手动构建运行
-
-```bash
-docker build -t ra2web:latest .
-docker run -d \
-  --name ra2web \
-  --restart always \
-  --log-opt max-size=1m \
-  --log-opt max-file=1 \
-  -p 5157:5157 \
-  ra2web:latest
-```
-
-启动后访问 http://localhost:5157 即可游玩。如需更换宿主端口，修改 `-p 宿主端口:5157` 或在 compose 中追加 `command: ["-p", "自定义端口"]` 并同步修改端口映射。
-
-多架构镜像（amd64 / arm64）构建示例：
-
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t <你的镜像名>:latest --push .
-```
-
 
